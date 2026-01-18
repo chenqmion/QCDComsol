@@ -39,8 +39,6 @@ class material_mixin:
 
                 exec(clean_code, globals(), context)
 
-            print('Loaded material')
-
         return _mat
 
     def new_param(self, *, tags, values):
@@ -52,8 +50,8 @@ class material_mixin:
 
     def select(self, objs):
         try:
-            self.selection().named(objs)
+            self.selection().named("geom1_" + objs + "_dom")
         except:
             for _obj in objs:
-                self.selection().named(_obj)
+                self.selection().named("geom1_" + _obj + "_dom")
 

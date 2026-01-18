@@ -103,62 +103,75 @@ geom.difference(name="dif1",
                 input2=["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"],
                 keep_input1=False, keep_input2=True, keep_intb=False)
 
+geom.run()
+
 #%% material
 mat_air = model.create_material('Air')
 # mat_air.new_param(tags="relpermeability", values=0.1)
-mat_air.select("geom1_dif1_dom")
+mat_air.select("dif1")
 
 mat_si = model.create_material('Si')
-mat_si.select("geom1_blk_chip_dom")
+mat_si.select("blk_chip")
 
-# ## qubit
-# geom.feature("wp2").geom().create("c_bulb_1", "Rectangle")
-# geom.feature("wp2").geom().feature("c_bulb_1").set("size", [h_bulb_1, w_bulb_1])
-# geom.feature("wp2").geom().feature("c_bulb_1").set("pos", [z_tube-h_bulb_1/2, x_bulb_1])
-#
-# geom.feature("wp2").geom().create("w_bulb_1", "Rectangle")
-# geom.feature("wp2").geom().feature("w_bulb_1").set("size", [h_link_1, w_link_1])
-# geom.feature("wp2").geom().feature("w_bulb_1").set("pos", [z_tube-h_link_1/2, x_bulb_1+w_bulb_1])
-#
-# geom.feature("wp2").geom().create("r_cap1", "Rectangle")
-# geom.feature("wp2").geom().feature("r_cap1").set("size", [h_cap_1, w_cap_1])
-# geom.feature("wp2").geom().feature("r_cap1").set("pos", [z_tube-h_cap_1/2, x_bulb_1+w_bulb_1+w_link_1])
-#
-# geom.feature("wp2").geom().create("r_junction", "Rectangle")
-# geom.feature("wp2").geom().feature("r_junction").set("size", [h_junction, w_junction])
-# geom.feature("wp2").geom().feature("r_junction").set("pos", [z_tube-h_junction/2, x_bulb_1+w_bulb_1+w_link_1+w_cap_1])
-#
-# geom.feature("wp2").geom().create("r_cap2", "Rectangle")
-# geom.feature("wp2").geom().feature("r_cap2").set("size", [h_cap_2, w_cap_2])
-# geom.feature("wp2").geom().feature("r_cap2").set("pos", [z_tube-h_cap_2/2, x_bulb_1+w_bulb_1+w_link_1+w_cap_1+w_junction])
-#
-# geom.feature("wp2").geom().create("r_bulb_2", "Rectangle")
-# geom.feature("wp2").geom().feature("r_bulb_2").set("size", [h_bulb_2, w_link_2])
-# geom.feature("wp2").geom().feature("r_bulb_2").set("pos", [z_tube-h_bulb_2/2, x_bulb_2-w_link_2])
-#
-# # geom.feature("wp2").geom().create("c_bulb_2", "Circle")
-# # geom.feature("wp2").geom().feature("c_bulb_2").set("r", r_bulb_2)
-# # geom.feature("wp2").geom().feature("c_bulb_2").set("pos", [x_bulb_2, 0])
-#
-# geom.feature("wp2").geom().create("uni1", "Union")
-# geom.feature("wp2").geom().feature("uni1").selection("input").set("c_bulb_1", "w_bulb_1", "r_cap1")
-# geom.feature("wp2").geom().feature("uni1").set("intbnd", False)
-#
-# geom.feature("wp2").geom().create("uni2", "Union")
-# geom.feature("wp2").geom().feature("uni2").selection("input").set("r_bulb_2", "r_cap2")
-# geom.feature("wp2").geom().feature("uni2").set("intbnd", False)
-#
-# ## resonator
-# geom.feature("wp2").geom().create("r1", "Rectangle")
-# geom.feature("wp2").geom().feature("r1").set("size", [w_resonator, l_resonator])
-# geom.feature("wp2").geom().feature("r1").set("pos", [z_tube-w_resonator/2, x_resonator])
-#
+#%% physics
+phys = model.create_physics("emw", "ElectromagneticWaves")
+phys.PEC_3D(["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"])
 
-# geom.run("fin")
+# phys.port3D(2, 'lport1')
+# phys.port3D(3, 'lport1')
 
-# model.comp1.selection().create("sel1", "Explicit")
-# model.comp1.selection("sel1").set(1)
-# model.comp1.selection("sel1").label("xyz")
+sel = model.comp1.selection().create('testt', "Box")
+sel.set("condition", "intersects")
+sel.set("entitydim", 2)
+
+xx = -(l_cavity_drive_1+r_cavity)
+yy = 0
+zz = z_cavity_drive + (r_pin+r_bulk)/2
+
+sel.set("xmin", xx-1e-6)
+sel.set("xmax", xx+1e-6)
+sel.set("ymin", yy-1e-6)
+sel.set("ymax", yy+1e-6)
+sel.set("zmin", zz-1e-6)
+sel.set("zmax", zz+1e-6)
+
+phys.port3D(1, 'testt')
+
+# model.physics("emw").create("pec2", "DomainPerfectElectricConductor", 3)
+# model.physics("emw").feature("pec2").selection().set(2, 3, 5, 7)
+#
+# model.param().set("LJ1", str(L_junction))
+# model.physics("emw").create("lelement1", "LumpedElement", 2)
+# model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
+# model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
+# model.physics("emw").feature("lelement1").selection().set(30)
+#
+# # model.physics("emw").create("sctr1", "Scattering", 2)
+# # model.physics("emw").feature("sctr1").selection().set(15)
+#
+# model.physics("emw").create("lport1", "LumpedPort", 2)
+# model.physics("emw").feature("lport1").set("PortType", "Coaxial")
+# model.physics("emw").feature("lport1").set("PortExcitation", "off")
+# model.physics("emw").feature("lport1").selection().set(1)
+#
+# model.physics("emw").create("lport2", "LumpedPort", 2)
+# model.physics("emw").feature("lport2").set("PortType", "Coaxial")
+# model.physics("emw").feature("lport2").set("PortExcitation", "off")
+# model.physics("emw").feature("lport2").selection().set(46)
+#
+#
+# model.physics("emw").create("lport3", "LumpedPort", 2)
+# model.physics("emw").feature("lport3").set("PortType", "Coaxial")
+# model.physics("emw").feature("lport3").set("PortExcitation", "off")
+# # model.physics("emw").feature("lport3").selection().set(58)
+# model.physics("emw").feature("lport3").selection().set(68)
+#
+# pymodel.save('model_5')
+#
+# #%% mesh
+# model.component("comp1").mesh().create("mesh1")
+# model.mesh("mesh1").autoMeshSize(2)
+# model.mesh("mesh1").run()
 
 model.save()
 model.show_tree()

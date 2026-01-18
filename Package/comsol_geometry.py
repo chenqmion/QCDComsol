@@ -6,7 +6,9 @@ class geometry_mixin:
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
         _cyl = self.feature().create(name, "Cylinder")
         _cyl.label(name)
-        # _cyl.set("contributeto", "on")
+        _cyl.set("selresult", True)
+
+        # model.component("comp1").geom("geom1").feature("dif2").set("selresultshow", "bnd");
 
         _cyl.set('r', r)
         _cyl.set('h', l)
@@ -43,6 +45,7 @@ class geometry_mixin:
     def union(self, *, name, input, keep_input, keep_intb):
         _uni = self.feature().create(name, "Union")
         _uni.label(name)
+        _uni.set("selresult", True)
 
         _uni.selection("input").set(input)
 
@@ -56,9 +59,6 @@ class geometry_mixin:
         _dif.label(name)
         _dif.set("selresult", True)
         _dif.set("selresultshow", "dom")
-
-        # bnd
-        # _dif.set("createresultselection", "on")
 
         _dif.selection("input").set(input1)
         _dif.selection("input2").set(input2)

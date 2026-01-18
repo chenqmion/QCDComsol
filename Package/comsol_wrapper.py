@@ -1,8 +1,9 @@
 import jpype
 from comsol_geometry import geometry_mixin
 from comsol_material import material_mixin
+from comsol_physics import physics_mixin
 
-class JavaWrapper(geometry_mixin, material_mixin):
+class JavaWrapper(geometry_mixin, material_mixin, physics_mixin):
     """
     Generic Wrapper combining JPype type conversion and Mixin functionality.
     """
