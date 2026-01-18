@@ -103,6 +103,14 @@ geom.difference(name="dif1",
                 input2=["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"],
                 keep_input1=False, keep_input2=True, keep_intb=False)
 
+#%% material
+mat_air = model.create_material('Air')
+# mat_air.new_param(tags="relpermeability", values=0.1)
+mat_air.select("geom1_dif1_dom")
+
+mat_si = model.create_material('Si')
+mat_si.select("geom1_blk_chip_dom")
+
 # ## qubit
 # geom.feature("wp2").geom().create("c_bulb_1", "Rectangle")
 # geom.feature("wp2").geom().feature("c_bulb_1").set("size", [h_bulb_1, w_bulb_1])
@@ -147,11 +155,16 @@ geom.difference(name="dif1",
 #
 
 # geom.run("fin")
+
+# model.comp1.selection().create("sel1", "Explicit")
+# model.comp1.selection("sel1").set(1)
+# model.comp1.selection("sel1").label("xyz")
+
 model.save()
 model.show_tree()
 
 
 # # 5. 保存
-model.save()
+# model.save()
 # client.disconnect()
 

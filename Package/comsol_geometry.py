@@ -6,6 +6,7 @@ class geometry_mixin:
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
         _cyl = self.feature().create(name, "Cylinder")
         _cyl.label(name)
+        # _cyl.set("contributeto", "on")
 
         _cyl.set('r', r)
         _cyl.set('h', l)
@@ -23,6 +24,7 @@ class geometry_mixin:
     def new_block(self, *, name, w, h, l, ax='z', pos=[0, 0, 0], mid_plane=False):
         _blk = self.feature().create(name, "Block")
         _blk.label(name)
+        _blk.set("selresult", True)
 
         _blk.set('size', [w, h, l])
         _blk.set('axistype', ax)
@@ -52,6 +54,11 @@ class geometry_mixin:
     def difference(self, *, name, input1, input2, keep_input1, keep_input2, keep_intb):
         _dif = self.feature().create(name, "Difference")
         _dif.label(name)
+        _dif.set("selresult", True)
+        _dif.set("selresultshow", "dom")
+
+        # bnd
+        # _dif.set("createresultselection", "on")
 
         _dif.selection("input").set(input1)
         _dif.selection("input2").set(input2)

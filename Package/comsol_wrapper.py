@@ -1,7 +1,8 @@
 import jpype
 from comsol_geometry import geometry_mixin
+from comsol_material import material_mixin
 
-class JavaWrapper(geometry_mixin):
+class JavaWrapper(geometry_mixin, material_mixin):
     """
     Generic Wrapper combining JPype type conversion and Mixin functionality.
     """
@@ -46,16 +47,29 @@ class JavaWrapper(geometry_mixin):
         new_args = []
         for arg in args:
             if isinstance(arg, (list, tuple)):
-                if not arg: new_args.append(arg)
-                elif any(isinstance(x, int) for x in arg) and not any(isinstance(x, float) for x in arg):
-                    new_args.append(jpype.JArray(jpype.JDouble)(arg))
+                if not arg:
+                    new_args.append(arg)
+                elif any(isinstance(x, bool) for x in arg):
+                    new_args.append(jpype.JArray(jpype.JBoolean)(arg))
                 elif any(isinstance(x, float) for x in arg):
                     new_args.append(jpype.JArray(jpype.JDouble)(arg))
+                elif any(isinstance(x, int) for x in arg):
+                    new_args.append(jpype.JArray(jpype.JInt)(arg))
                 elif any(isinstance(x, str) for x in arg):
                     new_args.append(jpype.JArray(jpype.JString)(arg))
                 else: new_args.append(arg)
+
+            elif isinstance(arg, bool):
+                new_args.append(jpype.JBoolean(arg))
+            elif isinstance(arg, float):
+                new_args.append(jpype.JDouble(arg))
+            elif isinstance(arg, int):
+                new_args.append(jpype.JInt(arg))
+            elif isinstance(arg, str):
+                new_args.append(jpype.JString(arg))
             else:
                 new_args.append(arg)
+
         return tuple(new_args)
 
     def _get_allowed_accessors(self, class_name):
