@@ -1,10 +1,16 @@
+import numpy as np
+
 class geometry_mixin:
-    def create_geometry(self):
-        comp = self.modelNode("comp1")
-        return comp.geom().create("geom1", 3)
+    def __init__(self, model):
+        comp = model.modelNode("comp1")
+        geom = comp.geom().create("geom1", 3)
+        comp.view("view1").set("transparency", True)
+
+        self._comp = comp
+        self._geom = geom
 
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
-        _cyl = self.feature().create(name, "Cylinder")
+        _cyl = self._geom.feature().create(name, "Cylinder")
         _cyl.label(name)
         _cyl.set("selresult", True)
 
@@ -21,10 +27,10 @@ class geometry_mixin:
             pos[idx_l] += -l/2
             _cyl.set("pos", pos)
 
-        self.run(name)
+        self._geom.run(name)
 
     def new_block(self, *, name, w, h, l, ax='z', pos=[0, 0, 0], mid_plane=False):
-        _blk = self.feature().create(name, "Block")
+        _blk = self._geom.feature().create(name, "Block")
         _blk.label(name)
         _blk.set("selresult", True)
 
@@ -39,11 +45,31 @@ class geometry_mixin:
             pos[idx_l] += l/ 2
             _blk.set("pos", pos)
 
-        self.run(name)
+        self._geom.run(name)
+
+    def new_coaxport(self, *, name, r1, r2, l1, l2, ax='z', pos=[0,0,0], mid_plane=False):
+        self.new_cylinder(name=name+'1', r=r1, l=l1, ax=ax,
+                          pos=pos, mid_plane=mid_plane)
+        self.new_cylinder(name=name+'2', r=r2, l=l2, ax=ax,
+                          pos=pos, mid_plane=mid_plane)
+
+        self._geom.run(name+'1')
+        self._geom.run(name+'2')
+
+        bnd_port = self._comp.selection().create(name+'_bnd', "Box")
+        bnd_port.set("entitydim", 2)
+
+        eps = 1e-6
+        for _idx, _ax in enumerate(['x', 'y', 'z']):
+            if _ax != ax:
+                pos[_idx] += (r1 + r2) / (2*np.sqrt(2))
+
+            bnd_port.set(_ax+"max", pos[_idx] + eps)
+            bnd_port.set(_ax+"min", pos[_idx] - eps)
 
     #%% boolean
     def union(self, *, name, input, keep_input, keep_intb):
-        _uni = self.feature().create(name, "Union")
+        _uni = self._geom.feature().create(name, "Union")
         _uni.label(name)
         _uni.set("selresult", True)
 
@@ -52,10 +78,10 @@ class geometry_mixin:
         _uni.set("keepadd", keep_input)
         _uni.set("intbnd", keep_intb)
 
-        self.run(name)
+        self._geom.run(name)
 
     def difference(self, *, name, input1, input2, keep_input1, keep_input2, keep_intb):
-        _dif = self.feature().create(name, "Difference")
+        _dif = self._geom.feature().create(name, "Difference")
         _dif.label(name)
         _dif.set("selresult", True)
         _dif.set("selresultshow", "dom")
@@ -67,4 +93,7 @@ class geometry_mixin:
         _dif.set("keepsubtract", keep_input2)
         _dif.set("intbnd", keep_intb)
 
-        self.run(name)
+        self._geom.run(name)
+
+    def finish(self):
+        self._geom.run()

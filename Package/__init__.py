@@ -1,5 +1,12 @@
 from comsol_client import ComsolClient
 
+from comsol_geometry import geometry_mixin
+from comsol_material import material_mixin
+from comsol_physics import physics_mixin
+from comsol_mesh import mesh_mixin
+from comsol_study import study_mixin
+from comsol_result import result_mixin
+
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
@@ -75,109 +82,68 @@ comsol_root = r'C:\Programs\Comsol'
 client = ComsolClient(comsol_root)
 model = client.create_model("Model1")
 
+model.param().set('l1', "1")
+
 #%% geometry
-geom = model.create_geometry()
+geom = geometry_mixin(model)
 geom.new_cylinder(name="cyl_cavity", r=r_cavity, l=h_cavity)
 geom.new_cylinder(name="cyl_stub", r=r_stub, l=h_stub)
-
-# cavity drive
-geom.new_cylinder(name="cyl_cavity_drive1", r=r_bulk, l=l_cavity_drive_1+r_cavity, ax='x', pos=[-(l_cavity_drive_1+r_cavity), 0, z_cavity_drive])
-geom.new_cylinder(name="cyl_cavity_drive2", r=r_pin, l=l_cavity_drive_2, ax='x', pos=[-(l_cavity_drive_1+r_cavity), 0, z_cavity_drive])
 
 # chip tube
 geom.new_block(name="blk_tube", w=2*r_tube, h=2*r_tube, l=l_tube, ax='x', pos=[0, 0, z_tube])
 geom.new_block(name="blk_tube2", w=(w_chip+0.5e-3), h=(h_chip+0.5e-3), l=l_tube_2, ax='x', pos=[0, 0, z_tube])
 geom.new_block(name="blk_chip", w=w_chip, h=h_chip, l=l_chip, ax='x', pos=[x_chip, 0, z_tube])
 
+# cavity drive
+geom.new_coaxport(name="cyl_cavity_drive", r1=r_bulk, r2=r_pin, l1=l_cavity_drive_1+r_cavity, l2=l_cavity_drive_2, ax='x', pos=[-(l_cavity_drive_1+r_cavity), 0, z_cavity_drive])
+
 # qubit drive
-geom.new_cylinder(name="cyl_qubit_drive1", r=r_bulk, l=l_qubit_drive_1, ax='y', pos=[x_qubit_drive, -(r_tube+l_qubit_drive_1), z_tube])
-geom.new_cylinder(name="cyl_qubit_drive2", r=r_pin, l=l_qubit_drive_2, ax='y', pos=[x_qubit_drive, -(r_tube+l_qubit_drive_1), z_tube])
+geom.new_coaxport(name="cyl_qubit_drive", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y', pos=[x_qubit_drive, -(r_tube+l_qubit_drive_1), z_tube])
 
 # output
-geom.new_cylinder(name="cyl_output1", r=r_bulk, l=l_qubit_drive_1, ax='y', pos=[x_output, -(r_tube+l_output_1), z_tube])
-geom.new_cylinder(name="cyl_output2", r=r_pin, l=l_qubit_drive_2, ax='y', pos=[x_output, -(r_tube+l_output_1), z_tube])
+geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y', pos=[x_output, -(r_tube+l_output_1), z_tube])
 
-# # combine
+# combine
 geom.difference(name="dif1",
                 input1=["cyl_cavity", "blk_tube", "blk_tube2", "cyl_cavity_drive1", "cyl_qubit_drive1", "cyl_output1"],
                 input2=["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"],
                 keep_input1=False, keep_input2=True, keep_intb=False)
 
-geom.run()
+geom.finish()
 
 #%% material
-mat_air = model.create_material('Air')
+mat_air = material_mixin(model, 'Air')
 # mat_air.new_param(tags="relpermeability", values=0.1)
 mat_air.select("dif1")
 
-mat_si = model.create_material('Si')
+mat_si = material_mixin(model, 'Si')
 mat_si.select("blk_chip")
 
 #%% physics
-phys = model.create_physics("emw", "ElectromagneticWaves")
+phys = physics_mixin(model,"emw", "ElectromagneticWaves")
 phys.PEC_3D(["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"])
+phys.port3D(1, "cyl_cavity_drive")
+phys.port3D(2, "cyl_qubit_drive")
+phys.port3D(3, "cyl_output")
 
-# phys.port3D(2, 'lport1')
-# phys.port3D(3, 'lport1')
+#%% mesh
+mesh = mesh_mixin(model,"mesh1")
+mesh.auto('normal')
+mesh.finish()
 
-sel = model.comp1.selection().create('testt', "Box")
-sel.set("condition", "intersects")
-sel.set("entitydim", 2)
+#%% study
+std1 = study_mixin(model, "std1")
+std1.solve_eigenfrequency(freq=3e9, num=5, mode='lr')
+std1.param_sweep(var='l1', rang=[0,1])
 
-xx = -(l_cavity_drive_1+r_cavity)
-yy = 0
-zz = z_cavity_drive + (r_pin+r_bulk)/2
-
-sel.set("xmin", xx-1e-6)
-sel.set("xmax", xx+1e-6)
-sel.set("ymin", yy-1e-6)
-sel.set("ymax", yy+1e-6)
-sel.set("zmin", zz-1e-6)
-sel.set("zmax", zz+1e-6)
-
-phys.port3D(1, 'testt')
-
-# model.physics("emw").create("pec2", "DomainPerfectElectricConductor", 3)
-# model.physics("emw").feature("pec2").selection().set(2, 3, 5, 7)
-#
-# model.param().set("LJ1", str(L_junction))
-# model.physics("emw").create("lelement1", "LumpedElement", 2)
-# model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
-# model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
-# model.physics("emw").feature("lelement1").selection().set(30)
-#
-# # model.physics("emw").create("sctr1", "Scattering", 2)
-# # model.physics("emw").feature("sctr1").selection().set(15)
-#
-# model.physics("emw").create("lport1", "LumpedPort", 2)
-# model.physics("emw").feature("lport1").set("PortType", "Coaxial")
-# model.physics("emw").feature("lport1").set("PortExcitation", "off")
-# model.physics("emw").feature("lport1").selection().set(1)
-#
-# model.physics("emw").create("lport2", "LumpedPort", 2)
-# model.physics("emw").feature("lport2").set("PortType", "Coaxial")
-# model.physics("emw").feature("lport2").set("PortExcitation", "off")
-# model.physics("emw").feature("lport2").selection().set(46)
-#
-#
-# model.physics("emw").create("lport3", "LumpedPort", 2)
-# model.physics("emw").feature("lport3").set("PortType", "Coaxial")
-# model.physics("emw").feature("lport3").set("PortExcitation", "off")
-# # model.physics("emw").feature("lport3").selection().set(58)
-# model.physics("emw").feature("lport3").selection().set(68)
-#
-# pymodel.save('model_5')
-#
-# #%% mesh
-# model.component("comp1").mesh().create("mesh1")
-# model.mesh("mesh1").autoMeshSize(2)
-# model.mesh("mesh1").run()
+#%% plot
+pg1 = result_mixin(model, "pg1", "PlotGroup3D")
+pg1.arrow_volume("arwv_E", obj='E')
+pg1.arrow_volume("arwv_H", obj='H')
 
 model.save()
 model.show_tree()
 
 
-# # 5. 保存
-# model.save()
 # client.disconnect()
 

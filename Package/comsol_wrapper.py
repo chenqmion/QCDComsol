@@ -1,9 +1,9 @@
 import jpype
-from comsol_geometry import geometry_mixin
-from comsol_material import material_mixin
-from comsol_physics import physics_mixin
+# from comsol_geometry import geometry_mixin
+# from comsol_material import material_mixin
+# from comsol_physics import physics_mixin
 
-class JavaWrapper(geometry_mixin, material_mixin, physics_mixin):
+class JavaWrapper:
     """
     Generic Wrapper combining JPype type conversion and Mixin functionality.
     """
@@ -30,17 +30,18 @@ class JavaWrapper(geometry_mixin, material_mixin, physics_mixin):
             pass
 
         # Phase 2: Child Node Lookup
-        try:
-            class_name = self._get_java_type()
-            allowed = self._get_allowed_accessors(class_name)
+        class_name = self._get_java_type()
+        allowed = self._get_allowed_accessors(class_name)
 
-            for method in allowed:
+        for method in allowed:
+            try:
                 if hasattr(self._java_model, method):
                     child = getattr(self._java_model, method)(name)
+
                     if child is not None:
                         return JavaWrapper(child, self._mph_name)
-        except:
-            pass
+            except:
+                pass
 
         raise AttributeError(f"Attribute '{name}' not found on {self.tag()} ({class_name})")
 
@@ -75,9 +76,9 @@ class JavaWrapper(geometry_mixin, material_mixin, physics_mixin):
 
     def _get_allowed_accessors(self, class_name):
         if ("Model" in class_name) and ("ModelNode" not in class_name):
-            return ["modelNode", "study", "result", "material", "dataset"]
+            return ["modelNode", "study", "result"]
         elif "ModelNode" in class_name:
-            return ["geom", "mesh", "physics", "material"]
+            return ["geom", "material", "physics", "mesh"]
         elif any(x in class_name for x in ["Geom", "Mesh", "Physics", "Study"]):
             return ["feature", "prop", "selection"]
         return ["feature"]

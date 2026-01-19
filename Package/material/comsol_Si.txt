@@ -1,0 +1,35 @@
+model.component("comp1").material("mat1").propertyGroup()
+     .create("Enu", "Enu", "Young's modulus and Poisson's ratio");
+model.component("comp1").material("mat1").propertyGroup()
+     .create("RefractiveIndex", "RefractiveIndex", "Refractive index");
+model.component("comp1").material("mat1").label("Silicon");
+model.component("comp1").material("mat1").set("family", "custom");
+model.component("comp1").material("mat1").set("customspecular", new double[]{0.7843137254901961, 1, 1});
+model.component("comp1").material("mat1").set("diffuse", "custom");
+model.component("comp1").material("mat1")
+     .set("customdiffuse", new double[]{0.6666666666666666, 0.6666666666666666, 0.7058823529411765});
+model.component("comp1").material("mat1").set("ambient", "custom");
+model.component("comp1").material("mat1")
+     .set("customambient", new double[]{0.6666666666666666, 0.6666666666666666, 0.7058823529411765});
+model.component("comp1").material("mat1").set("noise", true);
+model.component("comp1").material("mat1").set("fresnel", 0.7);
+model.component("comp1").material("mat1").set("roughness", 0.5);
+model.component("comp1").material("mat1").set("diffusewrap", 0);
+model.component("comp1").material("mat1").set("reflectance", 0);
+model.component("comp1").material("mat1").propertyGroup("def")
+     .set("relpermeability", new String[]{"1", "0", "0", "0", "1", "0", "0", "0", "1"});
+model.component("comp1").material("mat1").propertyGroup("def")
+     .set("electricconductivity", new String[]{"1e-12[S/m]", "0", "0", "0", "1e-12[S/m]", "0", "0", "0", "1e-12[S/m]"});
+model.component("comp1").material("mat1").propertyGroup("def")
+     .set("thermalexpansioncoefficient", new String[]{"2.6e-6[1/K]", "0", "0", "0", "2.6e-6[1/K]", "0", "0", "0", "2.6e-6[1/K]"});
+model.component("comp1").material("mat1").propertyGroup("def").set("heatcapacity", "700[J/(kg*K)]");
+model.component("comp1").material("mat1").propertyGroup("def")
+     .set("relpermittivity", new String[]{"11.7", "0", "0", "0", "11.7", "0", "0", "0", "11.7"});
+model.component("comp1").material("mat1").propertyGroup("def").set("density", "2329[kg/m^3]");
+model.component("comp1").material("mat1").propertyGroup("def")
+     .set("thermalconductivity", new String[]{"130[W/(m*K)]", "0", "0", "0", "130[W/(m*K)]", "0", "0", "0", "130[W/(m*K)]"});
+model.component("comp1").material("mat1").propertyGroup("Enu").set("E", "170[GPa]");
+model.component("comp1").material("mat1").propertyGroup("Enu").set("nu", "0.28");
+model.component("comp1").material("mat1").propertyGroup("RefractiveIndex")
+     .set("n", new String[]{"3.48", "0", "0", "0", "3.48", "0", "0", "0", "3.48"});
+model.component("comp1").material("mat1").selection().set();
