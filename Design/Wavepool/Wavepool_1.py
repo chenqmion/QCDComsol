@@ -2,7 +2,6 @@ import os
 import sys
 
 sys.path.append("../../Package/")
-
 from comsol_client import ComsolClient
 
 from comsol_geometry import geometry_mixin
@@ -85,7 +84,7 @@ w_resonator = 200e-6
 client = ComsolClient()
 model = client.create_model("Wavepool_1")
 
-model.param().set('l1', "1")
+model.param().set("LJ1", L_junction)
 
 #%% geometry
 geom = geometry_mixin(model)
@@ -129,6 +128,14 @@ phys.port3D(1, "cyl_cavity_drive")
 phys.port3D(2, "cyl_qubit_drive")
 phys.port3D(3, "cyl_output")
 
+# model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
+# model.physics("emw").feature("pec3").selection().set(29, 31, 55)
+#
+# model.physics("emw").create("lelement1", "LumpedElement", 2)
+# model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
+# model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
+# model.physics("emw").feature("lelement1").selection().set(30)
+
 #%% mesh
 mesh = mesh_mixin(model,"mesh1")
 mesh.auto('normal')
@@ -137,7 +144,7 @@ mesh.finish()
 #%% study
 std1 = study_mixin(model, "std1")
 std1.solve_eigenfrequency(freq=3e9, num=5, mode='lr')
-std1.param_sweep(var='l1', rang=[0,1])
+std1.param_sweep(var="LJ1", rang=[L_junction,2*L_junction])
 
 #%% plot
 pg1 = result_mixin(model, "pg1", "PlotGroup3D")

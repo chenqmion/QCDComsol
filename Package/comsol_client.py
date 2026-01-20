@@ -28,7 +28,6 @@ class ComsolClient:
         )
         ComsolClient._is_started = True
 
-        # 4. 导入核心工具
         from com.comsol.model.util import ModelUtil
         ModelUtil.initStandalone(False)
 
@@ -45,8 +44,8 @@ class ComsolClient:
     def load_model(self, mph_path):
         from comsol_wrapper import JavaWrapper
         mph_name = os.path.basename(mph_path)[:-4]
-        java_model = self.ModelUtil.load(mph_name, mph_path, self.comsol_client)
-        return JavaWrapper(java_model, mph_name)
+        java_model = self.ModelUtil.load(mph_name, mph_path)
+        return JavaWrapper(java_model, mph_name, self.comsol_client)
 
     def disconnect(self):
         from comsol_wrapper import JavaWrapper
