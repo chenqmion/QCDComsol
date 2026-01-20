@@ -42,6 +42,7 @@ class result_mixin:
             _vol = self._pg.create(name, "Volume")
         elif mode == 'isosurface':
             _vol = self._pg.create("iso1", "Isosurface")
+            _vol.set("number", 100)
 
         _vol.set("data", "dset1")
         _vol.set("solutionparams", "parent")
@@ -51,5 +52,8 @@ class result_mixin:
             _vol.set("expr", "emw.normE")
         else:
             _vol.set("expr", "emw.normH")
+
+        _vol.set("colortable", "RainbowLight")
+        _vol.set("colorscalemode", "logarithmic")
 
         self._pg.run()
