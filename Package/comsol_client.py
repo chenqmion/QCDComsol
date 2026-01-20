@@ -6,7 +6,8 @@ import jpype.imports
 class ComsolClient:
     _is_started = False
 
-    def __init__(self, comsol_root):
+    def __init__(self, comsol_root=r'C:\Programs\Comsol'):
+        self.comsol_client = os.path.dirname(os.path.abspath(__file__))
         self.comsol_root = comsol_root
         self.connect()
 
@@ -37,14 +38,14 @@ class ComsolClient:
     def create_model(self, mph_name):
         from comsol_wrapper import JavaWrapper
         java_model = self.ModelUtil.create(mph_name)
-        wrapper = JavaWrapper(java_model, mph_name)
+        wrapper = JavaWrapper(java_model, mph_name, self.comsol_client)
         wrapper.modelNode().create("comp1")
         return wrapper
 
     def load_model(self, mph_path):
         from comsol_wrapper import JavaWrapper
         mph_name = os.path.basename(mph_path)[:-4]
-        java_model = self.ModelUtil.load(mph_name, mph_path)
+        java_model = self.ModelUtil.load(mph_name, mph_path, self.comsol_client)
         return JavaWrapper(java_model, mph_name)
 
     def disconnect(self):

@@ -13,7 +13,7 @@ class material_mixin:
         self._mat = mat
         self._name = name
 
-        material_path = os.path.join(os.getcwd(), "material", "comsol_" + name + '.txt')
+        material_path = os.path.join(model._comsol_client, "material", "comsol_" + name + '.txt')
         if os.path.exists(material_path):
             self.builtin_material(material_path)
 

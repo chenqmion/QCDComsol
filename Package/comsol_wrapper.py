@@ -8,9 +8,10 @@ class JavaWrapper:
     Generic Wrapper combining JPype type conversion and Mixin functionality.
     """
 
-    def __init__(self, java_model, mph_name=None):
+    def __init__(self, java_model, mph_name, comsol_client):
         self._java_model = java_model
         self._mph_name = mph_name
+        self._comsol_client = comsol_client
 
     def __getattr__(self, name):
         # Phase 1: Native Java
@@ -22,7 +23,7 @@ class JavaWrapper:
                     result = java_attr(*new_args, **kwargs)
                     if result is not None and hasattr(result, 'getClass'):
                         if "com.comsol" in result.getClass().getName():
-                            return JavaWrapper(result, self._mph_name)
+                            return JavaWrapper(result, self._mph_name, self._comsol_client)
                     return result
                 return hooked
             return java_attr
@@ -39,7 +40,7 @@ class JavaWrapper:
                     child = getattr(self._java_model, method)(name)
 
                     if child is not None:
-                        return JavaWrapper(child, self._mph_name)
+                        return JavaWrapper(child, self._mph_name, self._comsol_client)
             except:
                 pass
 

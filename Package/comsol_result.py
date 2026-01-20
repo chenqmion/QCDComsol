@@ -6,7 +6,7 @@ class result_mixin:
         self._pg = pg
         self._std_name = name
 
-    def arrow_volume(self, name, obj):
+    def arrow_volume(self, name, obj, mode='elements'):
         _av = self._pg.create(name, "ArrowVolume")
 
         _av.set("data", "dset1")
@@ -24,8 +24,32 @@ class result_mixin:
             _av.setIndex("expr", "emw.Hz", 2)
             _av.set("color", "blue")
 
-        _av.set("placement", "elements")
-        _av.set("maxpointcount", '100000')
+        if (mode == 'elements') or (mode == 'gausspoints'):
+            _av.set("placement", mode)
+            _av.set("maxpointcount", 1000000)
+        else:
+            _av.set("placement", "grid");
+            _av.set("xnumber", 100);
+            _av.set("ynumber", 100);
+            _av.set("znumber", 100);
+
         _av.set("arrowlength", "logarithmic")
+
+        self._pg.run()
+
+    def volume(self, name, obj, mode='volume'):
+        if mode == 'volume':
+            _vol = self._pg.create(name, "Volume")
+        elif mode == 'isosurface':
+            _vol = self._pg.create("iso1", "Isosurface")
+
+        _vol.set("data", "dset1")
+        _vol.set("solutionparams", "parent")
+        _vol.set("evaluationsettings", "parent")
+
+        if obj == 'E':
+            _vol.set("expr", "emw.normE")
+        else:
+            _vol.set("expr", "emw.normH")
 
         self._pg.run()
