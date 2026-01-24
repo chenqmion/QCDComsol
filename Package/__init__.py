@@ -77,7 +77,14 @@ x_resonator = x_qubit_drive + 1000e-6
 l_resonator = 7400e-6
 w_resonator = 200e-6
 
-comsol_root = r'C:\Programs\Comsol'
+# # comsol_root = r'C:\Programs\Comsol'
+#
+# # !export DYLD_LIBRARY_PATH=/Applications/COMSOL62/Multiphysics/bin/macarm64:$DYLD_LIBRARY_PATH
+#
+# import os
+# os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+comsol_root=r'/Applications/COMSOL63/Multiphysics'
 
 client = ComsolClient(comsol_root)
 model = client.create_model("Model1")
