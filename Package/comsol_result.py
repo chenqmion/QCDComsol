@@ -11,7 +11,7 @@ class result_mixin:
 
         _av.set("data", "dset1")
         _av.set("solutionparams", "parent")
-        _av.set("evaluationsettings", "parent")
+        # _av.set("evaluationsettings", "parent")
 
         if obj == 'E':
             _av.setIndex("expr", "emw.Ex", 0)
@@ -46,7 +46,7 @@ class result_mixin:
 
         _vol.set("data", "dset1")
         _vol.set("solutionparams", "parent")
-        _vol.set("evaluationsettings", "parent")
+        # _vol.set("evaluationsettings", "parent")
 
         if obj == 'E':
             _vol.set("expr", "emw.normE")
