@@ -1,3 +1,7 @@
+import os
+import sys
+
+sys.path.append("../../Package/")
 from comsol_client import ComsolClient
 
 from comsol_geometry import geometry_mixin
@@ -77,19 +81,10 @@ x_resonator = x_qubit_drive + 1000e-6
 l_resonator = 7400e-6
 w_resonator = 200e-6
 
-# # comsol_root = r'C:\Programs\Comsol'
-#
-# # !export DYLD_LIBRARY_PATH=/Applications/COMSOL62/Multiphysics/bin/macarm64:$DYLD_LIBRARY_PATH
-#
-# import os
-# os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+client = ComsolClient()
+model = client.create_model("Wavepool_1")
 
-comsol_root=r'/Applications/COMSOL63/Multiphysics'
-
-client = ComsolClient(comsol_root)
-model = client.create_model("Model1")
-
-model.param().set('l1', "1")
+model.param().set("LJ1", L_junction)
 
 #%% geometry
 geom = geometry_mixin(model)
@@ -133,6 +128,14 @@ phys.port3D(1, "cyl_cavity_drive")
 phys.port3D(2, "cyl_qubit_drive")
 phys.port3D(3, "cyl_output")
 
+# model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
+# model.physics("emw").feature("pec3").selection().set(29, 31, 55)
+#
+# model.physics("emw").create("lelement1", "LumpedElement", 2)
+# model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
+# model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
+# model.physics("emw").feature("lelement1").selection().set(30)
+
 #%% mesh
 mesh = mesh_mixin(model,"mesh1")
 mesh.auto('normal')
@@ -141,12 +144,18 @@ mesh.finish()
 #%% study
 std1 = study_mixin(model, "std1")
 std1.solve_eigenfrequency(freq=3e9, num=5, mode='lr')
-std1.param_sweep(var='l1', rang=[0,1])
+std1.param_sweep(var="LJ1", rang=[L_junction,2*L_junction])
 
 #%% plot
 pg1 = result_mixin(model, "pg1", "PlotGroup3D")
 pg1.arrow_volume("arwv_E", obj='E')
 pg1.arrow_volume("arwv_H", obj='H')
+
+pg2 = result_mixin(model, "pg2", "PlotGroup3D")
+pg2.volume("v_E", obj='E', mode='isosurface')
+
+pg3 = result_mixin(model, "pg3", "PlotGroup3D")
+pg3.volume("v_H", obj='H', mode='isosurface')
 
 model.save()
 model.show_tree()
