@@ -98,24 +98,33 @@ class ComsolClient:
             jpype.startJVM(
                 jvm_path,
                 f"-Djava.class.path={os.path.pathsep.join(jars_list)}",
+                "-Xverify:none",  # 核心提速参数
                 "-Dcs.standalone=false",
                 "-Dcs.display=headless",
                 "-Xmx2g",
                 convertStrings=True
             )
 
-        # --- 7. Final Connection ---
-        from com.comsol.model.util import ModelUtil
-        time.sleep(2)
-        try:
+            # --- 7. Final Connection (Optimized Handshake) ---
+            from com.comsol.model.util import ModelUtil
             print(f"Connecting to localhost:{actual_port}...")
-            ModelUtil.connect("localhost", actual_port)
+
+            connected = False
+            # 最多尝试 20 次，每次间隔 0.1s，总计 2s
+            for i in range(20):
+                try:
+                    ModelUtil.connect("localhost", actual_port)
+                    connected = True
+                    break
+                except:
+                    time.sleep(0.1)
+
+            if not connected:
+                raise RuntimeError(f"Failed to connect to COMSOL at port {actual_port} after 2s.")
+
             self.ModelUtil = ModelUtil
             ComsolClient._is_started = True
             print(">>> Connection Successful! <<<")
-        except Exception as e:
-            if self._server_process: self._server_process.kill()
-            raise e
 
     def disconnect(self):
         if self._server_process:
