@@ -21,94 +21,78 @@ class ComsolClient:
     def connect(self):
         if self._is_started: return
 
-        import os, subprocess, time, platform, re, glob, jpype
-
-        # --- 1. Platform Detection ---
+        # --- 1. Platform & Path Setup (Standardized) ---
         current_os = platform.system()
         is_mac = (current_os == "Darwin")
+        arch = "macarm64" if (is_mac and platform.machine() == "arm64") else ("maci64" if is_mac else "win64")
+        server_exe = "comsol" if is_mac else "comsolmphserver.exe"
+        jvm_name = "libjvm.dylib" if is_mac else "jvm.dll"
 
-        # --- 2. Path Setup based on your Scan ---
-        if is_mac:
-            arch = "macarm64" if platform.machine() == "arm64" else "maci64"
-            server_exe_name = "comsol"
-            jvm_lib_name = "libjvm.dylib"
-        else:
-            arch = "win64"
-            # Updated based on your diagnostic: comsolmphserver.exe
-            server_exe_name = "comsolmphserver.exe"
-            jvm_lib_name = "jvm.dll"
+        bin_path = os.path.join(self.comsol_root, "bin", arch)
+        server_executable = os.path.join(bin_path, server_exe)
 
-        # Construct path: C:\Programs\Comsol\bin\win64\comsolmphserver.exe
-        bin_arch_path = os.path.join(self.comsol_root, "bin", arch)
-        server_executable = os.path.join(bin_arch_path, server_exe_name)
-
-        if not os.path.exists(server_executable):
-            raise FileNotFoundError(f"Executable not found at {server_executable}. "
-                                    f"Please check your comsol_root.")
-
-        # --- 3. Windows DLL Environment Fix ---
+        # --- 2. Windows DLL Setup ---
         if not is_mac:
-            # Add bin and lib to PATH so dependencies like fl_node.dll are found
-            lib_arch_path = os.path.join(self.comsol_root, "lib", arch)
-            for p in [bin_arch_path, lib_arch_path]:
-                if os.path.exists(p) and p not in os.environ['PATH']:
-                    os.environ['PATH'] = p + os.path.pathsep + os.environ['PATH']
+            lib_path = os.path.join(self.comsol_root, "lib", arch)
+            for p in [bin_path, lib_path]:
+                if os.path.exists(p):
+                    if p not in os.environ['PATH']:
+                        os.environ['PATH'] = p + os.path.pathsep + os.environ['PATH']
+                    if hasattr(os, 'add_dll_directory'):
+                        try:
+                            os.add_dll_directory(p)
+                        except:
+                            pass
 
-            # Python 3.8+ DLL Directory Logic
-            if hasattr(os, 'add_dll_directory'):
-                try:
-                    os.add_dll_directory(bin_arch_path)
-                    if os.path.exists(lib_arch_path):
-                        os.add_dll_directory(lib_arch_path)
-                except Exception as e:
-                    print(f"Note: DLL directory notice: {e}")
-
-        # --- 4. Start Server ---
+        # --- 3. Start COMSOL Server ---
         print(f"Starting Server: {server_executable}")
-        # Windows comsolmphserver.exe doesn't need 'server' argument
-        cmd = [server_executable, 'server', '-port', '2036'] if is_mac else [server_executable, '-port', '2036']
-
+        cmd = [server_executable, 'server', '-port', '2036'] if is_mac else [server_executable, '-port', '2036',
+                                                                             '-silent']
         self._server_process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            env=os.environ.copy(),
-            universal_newlines=True,
-            shell=(not is_mac)
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            env=os.environ.copy(), universal_newlines=True, shell=(not is_mac)
         )
 
-        # --- 5. Port Capture ---
+        # --- 4. Capture Port ---
         actual_port = 2036
         start_time = time.time()
         while True:
             line = self._server_process.stdout.readline()
             if line:
-                # Capture the port from log: e.g., "COMSOL Multiphysics server ... listening on port 2036"
                 match = re.search(r"listening on port\s+(\d+)", line)
                 if match:
                     actual_port = int(match.group(1))
                     print(f"✅ Server Port: {actual_port}")
                     break
-            if time.time() - start_time > 30:
-                print("⚠️ Port capture timeout. Please check your license.")
-                break
+            if time.time() - start_time > 30: break
 
-        # --- 6. JVM Dependency Setup (Clean Classpath) ---
+        # --- 5. REFINED CLASSPATH (Top-level only) ---
+        print("Loading dependencies (Top-level plugins)...")
         jars = []
         plugins_path = os.path.join(self.comsol_root, "plugins")
         common_path = os.path.join(self.comsol_root, "java", "common")
-        for p in [plugins_path, common_path]:
-            if os.path.exists(p):
-                jars += glob.glob(os.path.join(p, "*.jar"))
-        jars.sort()
 
-        # --- 7. Start JVM ---
+        # KEY OPTIMIZATION:
+        # We load every jar in 'plugins', but DO NOT use recursive=True.
+        # This includes javax.websocket, org.eclipse, and com.comsol
+        # without diving into conflict-prone subdirectories.
+        if os.path.exists(plugins_path):
+            jars += glob.glob(os.path.join(plugins_path, "*.jar"))
+
+        if os.path.exists(common_path):
+            jars += glob.glob(os.path.join(common_path, "*.jar"))
+
+        # Remove duplicates and sort for deterministic behavior
+        jars = sorted(list(set(jars)))
+        print(f"Total Jars loaded: {len(jars)}")
+
+        # --- 6. Start JVM ---
         if not jpype.isJVMStarted():
             if is_mac:
                 jvm_path = os.path.join(self.comsol_root, "java", arch, "jre", "Contents", "Home", "lib", "server",
-                                        jvm_lib_name)
+                                        jvm_name)
             else:
-                jvm_path = os.path.join(self.comsol_root, "java", arch, "jre", "bin", "server", jvm_lib_name)
+                jvm_path = os.path.join(self.comsol_root, "java", arch, "jre", "bin", "server", jvm_name)
 
             jpype.startJVM(
                 jvm_path,
@@ -119,9 +103,9 @@ class ComsolClient:
                 convertStrings=True
             )
 
-        # --- 8. Connect ---
+        # --- 7. Final Connection ---
         from com.comsol.model.util import ModelUtil
-        time.sleep(2)  # Necessary delay for Windows socket stabilization
+        time.sleep(2)
         try:
             print(f"Connecting to localhost:{actual_port}...")
             ModelUtil.connect("localhost", actual_port)
@@ -155,8 +139,4 @@ class ComsolClient:
         mph_name = os.path.basename(mph_path)[:-4]
         java_model = self.ModelUtil.load(mph_name, mph_path)
         return JavaWrapper(java_model, mph_name, self.comsol_client)
-
-    def disconnect(self):
-        from comsol_wrapper import JavaWrapper
-        self.ModelUtil.disconnect()
 
