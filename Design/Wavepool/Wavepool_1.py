@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 
 sys.path.append("../../Package/")
 from comsol_client import ComsolClient
@@ -81,7 +82,14 @@ x_resonator = x_qubit_drive + 1000e-6
 l_resonator = 7400e-6
 w_resonator = 200e-6
 
-client = ComsolClient()
+if platform.system() == "Darwin":
+    comsol_root = '/Applications/COMSOL63/Multiphysics'
+else:
+    # Typical Windows path - use 'r' for raw string to handle backslashes
+    comsol_root = r'C:\Programs\Comsol'
+
+client = ComsolClient(comsol_root)
+
 model = client.create_model("Wavepool_1")
 
 model.param().set("LJ1", L_junction)

@@ -9,8 +9,6 @@ class result_mixin:
     def arrow_volume(self, name, obj, mode='elements'):
         _av = self._pg.create(name, "ArrowVolume")
 
-        _av.set("data", "dset1")
-        print(f"6.3 版本 ArrowVolume 支持的属性列表: {list(_av.properties())}")
         _av.set("solutionparams", "parent")
         # _av.set("evaluationsettings", "parent")
 
