@@ -21,6 +21,10 @@ class ComsolClient:
     def connect(self):
         if self._is_started: return
 
+        # Windows 专用的清理逻辑：启动前杀掉残留的 server
+        if platform.system() == "Windows":
+            os.system("taskkill /F /IM comsolmphserver.exe /T >nul 2>&1")
+
         # --- 1. Platform Detection ---
         current_os = platform.system()
         is_mac = (current_os == "Darwin")
