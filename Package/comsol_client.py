@@ -75,18 +75,28 @@ class ComsolClient:
             if time.time() - start_time > 30:
                 break
 
-        # --- 5. REFINED CLASSPATH (Fixed Variable Scope) ---
-        print("Loading dependencies (Top-level plugins)...")
-        jars_list = []  # Renamed to avoid confusion
+        # --- 5. REFINED CLASSPATH (High Speed Memory Filter) ---
+        print("Loading dependencies (Memory Filtering)...")
         plugins_path = os.path.join(self.comsol_root, "plugins")
         common_path = os.path.join(self.comsol_root, "java", "common")
 
-        # Non-recursive top-level scan (Prevents Jetty conflicts)
+        jars_list = []
+
+        # 1. 磁盘只读一次：列出所有文件
         if os.path.exists(plugins_path):
-            jars_list += glob.glob(os.path.join(plugins_path, "*.jar"))
+            all_files = os.listdir(plugins_path)
+            # 2. 在内存中进行字符串判断，这比多次 glob 快得多
+            for f in all_files:
+                if f.endswith(".jar"):
+                    f_lower = f.lower()
+                    # 只保留核心组件，避开可能冲突的其他第三方库
+                    if f_lower.startswith(("com.comsol.", "org.eclipse.", "javax.websocket")):
+                        jars_list.append(os.path.join(plugins_path, f))
 
         if os.path.exists(common_path):
-            jars_list += glob.glob(os.path.join(common_path, "*.jar"))
+            for f in os.listdir(common_path):
+                if f.endswith(".jar"):
+                    jars_list.append(os.path.join(common_path, f))
 
         jars_list = sorted(list(set(jars_list)))
         print(f"Total Jars loaded: {len(jars_list)}")
@@ -102,7 +112,7 @@ class ComsolClient:
             jpype.startJVM(
                 jvm_path,
                 f"-Djava.class.path={os.path.pathsep.join(jars_list)}",
-                "-Xverify:none",  # 核心提速参数
+                "-XX:TieredStopAtLevel=1",  # 现代版提速参数，无警告
                 "-Dcs.standalone=false",
                 "-Dcs.display=headless",
                 "-Xmx2g",
