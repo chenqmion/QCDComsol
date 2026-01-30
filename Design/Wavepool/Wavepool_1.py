@@ -85,11 +85,9 @@ w_resonator = 200e-6
 if platform.system() == "Darwin":
     comsol_root = '/Applications/COMSOL63/Multiphysics'
 else:
-    # Typical Windows path - use 'r' for raw string to handle backslashes
     comsol_root = r'C:\Programs\Comsol'
 
 client = ComsolClient(comsol_root)
-
 model = client.create_model("Wavepool_1")
 
 model.param().set("LJ1", L_junction)
