@@ -7,7 +7,6 @@ import re
 import jpype
 import jpype.imports
 
-
 class ComsolClient:
     _is_started = False
     _server_process = None
@@ -22,7 +21,7 @@ class ComsolClient:
     def connect(self):
         if self._is_started: return
 
-        # Windows cleanup logic
+        # Windows 专用的清理逻辑：启动前杀掉残留的 server
         if platform.system() == "Windows":
             os.system("taskkill /F /IM comsolmphserver.exe /T >nul 2>&1")
 
@@ -31,13 +30,14 @@ class ComsolClient:
         is_mac = (current_os == "Darwin")
         arch = "macarm64" if (is_mac and platform.machine() == "arm64") else ("maci64" if is_mac else "win64")
 
+        # Executable names based on your diagnostic
         server_exe = "comsol" if is_mac else "comsolmphserver.exe"
         jvm_lib_name = "libjvm.dylib" if is_mac else "jvm.dll"
 
         bin_path = os.path.join(self.comsol_root, "bin", arch)
         server_executable = os.path.join(bin_path, server_exe)
 
-        # --- 2. Windows DLL Environment Fix (KEEPING THIS!) ---
+        # --- 2. Windows DLL Environment Fix ---
         if not is_mac:
             lib_path = os.path.join(self.comsol_root, "lib", arch)
             for p in [bin_path, lib_path]:
@@ -51,7 +51,8 @@ class ComsolClient:
                             pass
 
         # --- 3. Start Server ---
-        # Removed the print(f"Starting Server...") for conciseness
+        print(f"Starting Server: {server_executable}")
+        # Note: No -silent on Windows to ensure we see port reassignments
         cmd = [server_executable, 'server', '-port', '2036'] if is_mac else [server_executable, '-port', '2036']
 
         self._server_process = subprocess.Popen(
@@ -59,30 +60,36 @@ class ComsolClient:
             env=os.environ.copy(), universal_newlines=True, shell=(not is_mac)
         )
 
-        # --- 4. Dynamic Port Capture (KEEPING THIS!) ---
+        # --- 4. Dynamic Port Capture ---
         actual_port = 2036
         start_time = time.time()
         while True:
             line = self._server_process.stdout.readline()
             if line:
-                # Silenced: print(f"Server Log: {line.strip()}")
+                print(f"Server Log: {line.strip()}")
                 match = re.search(r"listening on port\s+(\d+)", line)
                 if match:
                     actual_port = int(match.group(1))
+                    print(f"✅ Server Port: {actual_port}")
                     break
             if time.time() - start_time > 30:
                 break
 
-        # --- 5. REFINED CLASSPATH (High Speed Memory Filter - KEEPING ALL!) ---
+        # --- 5. REFINED CLASSPATH (High Speed Memory Filter) ---
+        print("Loading dependencies (Memory Filtering)...")
         plugins_path = os.path.join(self.comsol_root, "plugins")
         common_path = os.path.join(self.comsol_root, "java", "common")
 
         jars_list = []
+
+        # 1. 磁盘只读一次：列出所有文件
         if os.path.exists(plugins_path):
             all_files = os.listdir(plugins_path)
+            # 2. 在内存中进行字符串判断，这比多次 glob 快得多
             for f in all_files:
                 if f.endswith(".jar"):
                     f_lower = f.lower()
+                    # 只保留核心组件，避开可能冲突的其他第三方库
                     if f_lower.startswith(("com.comsol.", "org.eclipse.", "javax.websocket")):
                         jars_list.append(os.path.join(plugins_path, f))
 
@@ -92,6 +99,7 @@ class ComsolClient:
                     jars_list.append(os.path.join(common_path, f))
 
         jars_list = sorted(list(set(jars_list)))
+        print(f"Total Jars loaded: {len(jars_list)}")
 
         # --- 6. Start JVM ---
         if not jpype.isJVMStarted():
@@ -104,17 +112,19 @@ class ComsolClient:
             jpype.startJVM(
                 jvm_path,
                 f"-Djava.class.path={os.path.pathsep.join(jars_list)}",
-                "-XX:TieredStopAtLevel=1",
+                "-XX:TieredStopAtLevel=1",  # 现代版提速参数，无警告
                 "-Dcs.standalone=false",
                 "-Dcs.display=headless",
                 "-Xmx2g",
                 convertStrings=True
             )
 
-            # --- 7. Final Connection ---
+            # --- 7. Final Connection (Optimized Handshake) ---
             from com.comsol.model.util import ModelUtil
+            print(f"Connecting to localhost:{actual_port}...")
 
             connected = False
+            # 最多尝试 20 次，每次间隔 0.1s，总计 2s
             for i in range(20):
                 try:
                     ModelUtil.connect("localhost", actual_port)
@@ -128,10 +138,11 @@ class ComsolClient:
 
             self.ModelUtil = ModelUtil
             ComsolClient._is_started = True
-            print(f">>> COMSOL Connected Successfully (Port: {actual_port}) <<<")
+            print(">>> Connection Successful! <<<")
 
     def disconnect(self):
         if self._server_process:
+            print("Closing COMSOL Server...")
             if self.ModelUtil:
                 try:
                     self.ModelUtil.disconnect()
@@ -139,7 +150,6 @@ class ComsolClient:
                     pass
             self._server_process.kill()
             ComsolClient._is_started = False
-            print(">>> COMSOL Disconnected <<<")
 
     def create_model(self, mph_name):
         from comsol_wrapper import JavaWrapper
@@ -150,8 +160,7 @@ class ComsolClient:
 
     def load_model(self, mph_path):
         from comsol_wrapper import JavaWrapper
-        if not os.path.exists(mph_path):
-            raise FileNotFoundError(f"Model file not found: {mph_path}")
-        mph_name = os.path.basename(mph_path).replace(".mph", "")
+        mph_name = os.path.basename(mph_path)[:-4]
         java_model = self.ModelUtil.load(mph_name, mph_path)
         return JavaWrapper(java_model, mph_name, self.comsol_client)
+

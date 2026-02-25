@@ -17,16 +17,13 @@ class physics_mixin:
         print("ElectromagneticWaves", "Electrostatics")
 
     def PEC_3D(self, objs):
-        try:
-            _pec = self._phy.create('pec3d_' + objs, "DomainPerfectElectricConductor", 3)
-            _pec.label('pec3d_' + objs)
-            _pec.selection().named("geom1_" + objs + "_dom")
+        if not isinstance(objs, (list, tuple, np.ndarray)):
+            objs = [objs]
 
-        except:
-            for _obj in objs:
-                _pec = self._phy.create('pec3d_' + _obj, "DomainPerfectElectricConductor", 3)
-                _pec.label('pec3d_' + _obj)
-                _pec.selection().named("geom1_" + _obj + "_dom")
+        for _obj in objs:
+            _pec = self._phy.create('pec3d_' + _obj, "DomainPerfectElectricConductor", 3)
+            _pec.label('pec3d_' + _obj)
+            _pec.selection().named("geom1_" + _obj + "_dom")
 
     def port3D(self, port_num, cyl_name):
         _port = self._phy.create("lport" + str(port_num), "LumpedPort", 2)
@@ -35,16 +32,13 @@ class physics_mixin:
         _port.selection().named(cyl_name+'_bnd')
 
     def PEC_2D(self, objs):
-        try:
-            _pec = self._phy.create('pec2d_' + objs, "PerfectElectricConductor", 2)
-            _pec.label('pec2d_' + objs)
-            _pec.selection().named(objs + "_bnd")
+        if not isinstance(objs, (list, tuple, np.ndarray)):
+            objs = [objs]
 
-        except:
-            for _obj in objs:
-                _pec = self._phy.create('pec2d_' + _obj, "PerfectElectricConductor", 2)
-                _pec.label('pec2d_' + _obj)
-                _pec.selection().named(_obj + "_bnd")
+        for _obj in objs:
+            _pec = self._phy.create('pec2d_' + _obj, "PerfectElectricConductor", 2)
+            _pec.label('pec2d_' + _obj)
+            _pec.selection().named(_obj + "_bnd")
 
     def Lumped(self, obj, type, value):
         _port = self._phy.create("lump_" + obj, "LumpedElement", 2)
@@ -54,6 +48,3 @@ class physics_mixin:
             _port.set("Lelement", value)
 
         _port.selection().named(obj+'_bnd')
-
-
-

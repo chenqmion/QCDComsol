@@ -103,13 +103,16 @@ geom.new_block(name="blk_tube2", w=(w_chip+0.5e-3), h=(h_chip+0.5e-3), l=l_tube_
 geom.new_block(name="blk_chip", w=w_chip, h=h_chip, l=l_chip, ax='x', pos=[x_chip, 0, z_tube])
 
 # cavity drive
-geom.new_coaxport(name="cyl_cavity_drive", r1=r_bulk, r2=r_pin, l1=l_cavity_drive_1+r_cavity, l2=l_cavity_drive_2, ax='x', pos=[-(l_cavity_drive_1+r_cavity), 0, z_cavity_drive])
+geom.new_coaxport(name="cyl_cavity_drive", r1=r_bulk, r2=r_pin, l1=l_cavity_drive_1+r_cavity, l2=l_cavity_drive_2, ax='x',
+                  pos=[-(l_cavity_drive_1+r_cavity), 0, z_cavity_drive])
 
 # qubit drive
-geom.new_coaxport(name="cyl_qubit_drive", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y', pos=[x_qubit_drive, -(r_tube+l_qubit_drive_1), z_tube])
+geom.new_coaxport(name="cyl_qubit_drive", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y',
+                  pos=[x_qubit_drive, -(r_tube+l_qubit_drive_1), z_tube])
 
 # output
-geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y', pos=[x_output, -(r_tube+l_output_1), z_tube])
+geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y',
+                  pos=[x_output, -(r_tube+l_output_1), z_tube])
 
 # combine
 geom.difference(name="dif1",
@@ -121,7 +124,7 @@ geom.finish()
 
 #%% material
 mat_air = material_mixin(model, 'Air')
-# mat_air.new_param(tags="relpermeability", values=0.1)
+# mat_air.new_param(tags="relpermeability", values=11.9)
 mat_air.select("dif1")
 
 mat_si = material_mixin(model, 'Si')
@@ -163,9 +166,9 @@ pg2.volume("v_E", obj='E', mode='isosurface')
 pg3 = result_mixin(model, "pg3", "PlotGroup3D")
 pg3.volume("v_H", obj='H', mode='isosurface')
 
+#%%
 model.save()
 model.show_tree()
-
 
 # client.disconnect()
 

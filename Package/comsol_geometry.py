@@ -10,6 +10,8 @@ class geometry_mixin:
         self._geom = geom
 
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
+        pos = list(pos)
+
         _cyl = self._geom.feature().create(name, "Cylinder")
         _cyl.label(name)
         _cyl.set("selresult", True)
@@ -30,6 +32,8 @@ class geometry_mixin:
         self._geom.run(name)
 
     def new_block(self, *, name, w, h, l, ax='z', pos=[0, 0, 0], mid_plane=False):
+        pos = list(pos)
+
         _blk = self._geom.feature().create(name, "Block")
         _blk.label(name)
         _blk.set("selresult", True)
@@ -48,6 +52,8 @@ class geometry_mixin:
         self._geom.run(name)
 
     def new_coaxport(self, *, name, r1, r2, l1, l2, ax='z', pos=[0,0,0], mid_plane=False):
+        pos = list(pos)
+
         self.new_cylinder(name=name+'1', r=r1, l=l1, ax=ax,
                           pos=pos, mid_plane=mid_plane)
         self.new_cylinder(name=name+'2', r=r2, l=l2, ax=ax,

@@ -42,16 +42,15 @@ class material_mixin:
             exec(clean_code, globals(), context)
 
     def new_param(self, *, tags, values):
-        try:
-            self._mat.propertyGroup("def").set(tags, values)
-        except:
-            for num_tag in range(np.size(tags)):
-                self._mat.propertyGroup("def").set(tags[num_tag], values[num_tag])
+        if not isinstance(tags, (list, tuple, np.ndarray)):
+            tags = [tags]
+
+        for num_tag in range(np.size(tags)):
+            self._mat.propertyGroup("def").set(tags[num_tag], values[num_tag])
 
     def select(self, objs):
-        try:
-            self._mat.selection().named("geom1_" + objs + "_dom")
-        except:
-            for _obj in objs:
-                self._mat.selection().named("geom1_" + _obj + "_dom")
+        if not isinstance(objs, (list, tuple, np.ndarray)):
+            objs = [objs]
 
+        for _obj in objs:
+            self._mat.selection().named("geom1_" + _obj + "_dom")
