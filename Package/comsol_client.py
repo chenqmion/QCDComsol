@@ -148,10 +148,11 @@ class ComsolClient:
         wrapper.modelNode().create("comp1")
         return wrapper
 
-    def load_model(self, mph_path):
+    def load_model(self, mph_name):
         from comsol_wrapper import JavaWrapper
+        mph_path = mph_name+'.mph'
         if not os.path.exists(mph_path):
             raise FileNotFoundError(f"Model file not found: {mph_path}")
-        mph_name = os.path.basename(mph_path).replace(".mph", "")
+        # mph_name = os.path.basename(mph_path).replace(".mph", "")
         java_model = self.ModelUtil.load(mph_name, mph_path)
         return JavaWrapper(java_model, mph_name, self.comsol_client)

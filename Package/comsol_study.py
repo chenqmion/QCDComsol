@@ -1,5 +1,10 @@
 class study_mixin:
     def __init__(self, model, name):
+        try:
+            model.study().remove(name)
+        except:
+            pass
+
         std = model.study().create(name)
 
         self._model = model

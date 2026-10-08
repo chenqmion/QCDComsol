@@ -4,13 +4,13 @@ import platform
 
 sys.path.append("../../Package/")
 from comsol_client import ComsolClient
-
 from comsol_geometry import geometry_mixin
 from comsol_material import material_mixin
 from comsol_physics import physics_mixin
 from comsol_mesh import mesh_mixin
 from comsol_study import study_mixin
 from comsol_result import result_mixin
+from helper_epr import do_epr
 
 #%%
 import numpy as np
@@ -114,6 +114,9 @@ geom.new_coaxport(name="cyl_qubit_drive", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_
 geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y',
                   pos=[x_output, -(r_tube+l_output_1), z_tube])
 
+# layout
+geom.new_plane('layout', ax='y', value=h_chip/2)
+
 # combine
 geom.difference(name="dif1",
                 input1=["cyl_cavity", "blk_tube", "blk_tube2", "cyl_cavity_drive1", "cyl_qubit_drive1", "cyl_output1"],
@@ -136,6 +139,8 @@ phys.PEC_3D(["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"]
 phys.port3D(1, "cyl_cavity_drive")
 phys.port3D(2, "cyl_qubit_drive")
 phys.port3D(3, "cyl_output")
+
+# phys.Lumped(obj, 'Inductor', "LJ1")
 
 # model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
 # model.physics("emw").feature("pec3").selection().set(29, 31, 55)
@@ -170,5 +175,7 @@ pg3.volume("v_H", obj='H', mode='isosurface')
 model.save()
 model.show_tree()
 
+#%%
+do_epr(model)
 # client.disconnect()
 

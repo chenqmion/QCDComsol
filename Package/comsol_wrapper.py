@@ -169,7 +169,6 @@ class JavaWrapper:
 
     def save(self, filename=None):
         target = filename if filename else (self._mph_name + '.mph')
-        print(f"Saving to {target}...")
         self._java_model.save(target)
 
     def show_tree(self, max_depth=3):

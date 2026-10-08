@@ -1,7 +1,12 @@
 class mesh_mixin:
     def __init__(self, model, name="mesh1"):
         comp = model.modelNode("comp1")
-        mesh = comp.mesh().create("mesh1")
+        try:
+            comp.mesh().remove(name)
+        except:
+            pass
+
+        mesh = comp.mesh().create(name)
 
         self._comp = comp
         self._mesh = mesh

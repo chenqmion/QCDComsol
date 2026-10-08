@@ -9,6 +9,20 @@ class geometry_mixin:
         self._comp = comp
         self._geom = geom
 
+    def new_plane(self, *, name, ax='z', value=0 ):
+        _plane = self._geom.feature().create(name, "WorkPlane")
+
+        _plane.set("unite", True)
+        if ax == 'x':
+            _plane.set("quickplane", "yz")
+        elif ax == 'y':
+            _plane.set("quickplane", "zx")
+        elif ax == 'z':
+            _plane.set("quickplane", "xy")
+
+        _plane.set("quicky", value)
+        self._geom.run(name)
+
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
         pos = list(pos)
 
