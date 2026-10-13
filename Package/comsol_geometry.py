@@ -101,7 +101,7 @@ class geometry_mixin:
 
         _uni.selection("input").set(input)
 
-        _uni.set("keepadd", keep_input)
+        _uni.set("keep", keep_input)
         _uni.set("intbnd", keep_intb)
 
         self._geom.run(name)
