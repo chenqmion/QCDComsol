@@ -4,6 +4,7 @@ import platform
 
 from comsol_client import ComsolClient
 from comsol_geometry import geometry_mixin
+from comsol_layout import layout_mixin
 from comsol_material import material_mixin
 from comsol_physics import physics_mixin
 from comsol_mesh import mesh_mixin
@@ -50,7 +51,7 @@ x_chip = r_cavity - 2.5e-3 # fixed !
 w_chip = 7e-3
 h_chip = 675e-6
 
-l_chip = 26.5e-3
+l_chip = 27e-3
 l_tube = (l_chip - 1e-3) - (r_cavity - x_chip) + r_cavity
 l_tube_2 = l_tube - 10e-3
 
@@ -99,7 +100,6 @@ geom.new_cylinder(name="cyl_stub", r=r_stub, l=h_stub)
 # chip tube
 geom.new_block(name="blk_tube", w=2*r_tube, h=2*r_tube, l=l_tube, ax='x', pos=[0, 0, z_tube])
 geom.new_block(name="blk_tube2", w=(w_chip+0.5e-3), h=(h_chip+0.5e-3), l=l_tube_2, ax='x', pos=[0, 0, z_tube])
-geom.new_block(name="blk_chip", w=w_chip, h=h_chip, l=l_chip, ax='x', pos=[x_chip, 0, z_tube])
 
 # cavity drive
 geom.new_coaxport(name="cyl_cavity_drive", r1=r_bulk, r2=r_pin, l1=l_cavity_drive_1+r_cavity, l2=l_cavity_drive_2, ax='x',
@@ -113,21 +113,29 @@ geom.new_coaxport(name="cyl_qubit_drive", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_
 geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2=l_qubit_drive_2, ax='y',
                   pos=[x_output, -(r_tube+l_output_1), z_tube])
 
-# layout
-# geom.new_plane(name='layout', ax='y', value=h_chip/2)
-
 # combine
 geom.difference(name="dif1",
                 input1=["cyl_cavity", "blk_tube", "blk_tube2", "cyl_cavity_drive1", "cyl_qubit_drive1", "cyl_output1"],
                 input2=["cyl_stub", "cyl_cavity_drive2", "cyl_qubit_drive2", "cyl_output2"],
                 keep_input1=False, keep_input2=True, keep_intb=False)
 
+# layout
+geom.new_block(name="blk_chip", w=w_chip, h=h_chip, l=l_chip, ax='x', pos=[x_chip, 0, z_tube])
+
+geom.union(name="uni1", input=["dif1", "blk_chip"], keep_input=False, keep_intb=True)
+
+wp_1 = layout_mixin(model, name='wp_1', ax='y', value=-h_chip/2)
+wp_1.import_gds(path='Wavepool_261009_v2.gds')
+wp_1.rotate_gds(degree=90)
+wp_1.move_gds(pos=[z_tube, x_chip + l_chip/2])
+
 geom.finish()
+model.save()
 
 #%% material
 mat_air = material_mixin(model, 'Air')
 # mat_air.new_param(tags="relpermeability", values=11.9)
-mat_air.select("dif1")
+mat_air.select("uni1")
 
 mat_si = material_mixin(model, 'Si')
 mat_si.select("blk_chip")
@@ -139,19 +147,14 @@ phys.port3D(1, "cyl_cavity_drive")
 phys.port3D(2, "cyl_qubit_drive")
 phys.port3D(3, "cyl_output")
 
-# phys.Lumped(obj, 'Inductor', "LJ1")
+phys.PEC_2D(['gnd'])
+phys.Lumped('jj', 'Inductor', "LJ1")
 
-model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
-model.physics("emw").feature("pec3").selection().set(29, 31, 55)
-
-model.physics("emw").create("lelement1", "LumpedElement", 2)
-model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
-# model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
-# model.physics("emw").feature("lelement1").selection().set(30)
+model.save()
 
 #%% mesh
 mesh = mesh_mixin(model,"mesh1")
-mesh.auto('normal')
+mesh.auto('fine')
 mesh.finish()
 
 #%% study
@@ -176,5 +179,5 @@ model.show_tree()
 
 #%%
 do_epr(model)
-# client.disconnect()
+client.disconnect()
 

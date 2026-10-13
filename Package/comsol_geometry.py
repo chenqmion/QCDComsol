@@ -9,19 +9,25 @@ class geometry_mixin:
         self._comp = comp
         self._geom = geom
 
-    def new_plane(self, *, name, ax='z', value=0 ):
-        _plane = self._geom.feature().create(name, "WorkPlane")
-
-        _plane.set("unite", True)
-        if ax == 'x':
-            _plane.set("quickplane", "yz")
-        elif ax == 'y':
-            _plane.set("quickplane", "zx")
-        elif ax == 'z':
-            _plane.set("quickplane", "xy")
-
-        _plane.set("quicky", value)
-        self._geom.run(name)
+    # def new_plane(self, *, name, ax='z', value=0 ):
+    #     _plane = self._geom.feature().create(name, "WorkPlane")
+    #
+    #     _plane.set("unite", True)
+    #     if ax == 'x':
+    #         _plane.set("quickplane", "yz")
+    #     elif ax == 'y':
+    #         _plane.set("quickplane", "zx")
+    #     elif ax == 'z':
+    #         _plane.set("quickplane", "xy")
+    #
+    #     _plane.set("quicky", value)
+    #     self._geom.run(name)
+    #
+    # def import_gds(self, *, name, path):
+    #     _gds = self._geom.feature(plane).geom().create(name, "Import")
+    #     _gds.set("filename", path)
+    #     _gds.set("updategeomunit", False)
+    #     _gds.importData()
 
     def new_cylinder(self, *, name, r, l, ax='z', pos=[0,0,0], mid_plane=False):
         pos = list(pos)
@@ -66,12 +72,12 @@ class geometry_mixin:
         self._geom.run(name)
 
     def new_coaxport(self, *, name, r1, r2, l1, l2, ax='z', pos=[0,0,0], mid_plane=False):
-        pos = list(pos)
+        _pos = list(pos)
 
         self.new_cylinder(name=name+'1', r=r1, l=l1, ax=ax,
-                          pos=pos, mid_plane=mid_plane)
+                          pos=_pos, mid_plane=mid_plane)
         self.new_cylinder(name=name+'2', r=r2, l=l2, ax=ax,
-                          pos=pos, mid_plane=mid_plane)
+                          pos=_pos, mid_plane=mid_plane)
 
         self._geom.run(name+'1')
         self._geom.run(name+'2')
@@ -82,10 +88,10 @@ class geometry_mixin:
         eps = 1e-6
         for _idx, _ax in enumerate(['x', 'y', 'z']):
             if _ax != ax:
-                pos[_idx] += (r1 + r2) / (2*np.sqrt(2))
+                _pos[_idx] += (r1 + r2) / (2*np.sqrt(2))
 
-            bnd_port.set(_ax+"max", pos[_idx] + eps)
-            bnd_port.set(_ax+"min", pos[_idx] - eps)
+            bnd_port.set(_ax+"max", _pos[_idx] + eps)
+            bnd_port.set(_ax+"min", _pos[_idx] - eps)
 
     #%% boolean
     def union(self, *, name, input, keep_input, keep_intb):
