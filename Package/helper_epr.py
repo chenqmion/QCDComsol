@@ -95,7 +95,8 @@ def do_epr(model, filename = None):
     Alpha_list = (1/2) * np.diag(Chi_mat)
 
     #%%
-    fig = plt.figure(figsize = (18*cm,9*cm), constrained_layout=True)
+    # fig = plt.figure(figsize = (18*cm,9*cm), constrained_layout=True)
+    fig = plt.figure(figsize = (36*cm,18*cm), constrained_layout=True)
     gs = GridSpec(nrows=1, ncols=4, figure=fig, width_ratios=[len(f_list),1,len(LJ_list),len(Q_mat)])
 
     # quality factor
