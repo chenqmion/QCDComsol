@@ -8,11 +8,10 @@ class JavaWrapper:
     Preserves specific type conversion logic and smart node navigation.
     """
 
-    def __init__(self, java_model, mph_name="model", comsol_client=None):
-        # Use __dict__ to set attributes to avoid infinite recursion in __getattr__
+    def __init__(self, java_model, mph_name="model", package_dir=None):
         self.__dict__['_java_model'] = java_model
         self.__dict__['_mph_name'] = mph_name
-        self.__dict__['_comsol_client'] = comsol_client
+        self.__dict__['_package_dir'] = package_dir
 
     # =========================================================================
     # 1. Core Logic: Attribute Dispatch & Navigation
@@ -57,7 +56,7 @@ class JavaWrapper:
                 accessor = getattr(self._java_model, method)
                 child = accessor(name)
                 if child is not None:
-                    return JavaWrapper(child, self._mph_name, self._comsol_client)
+                    return JavaWrapper(child, self._mph_name, self._package_dir)
             except:
                 continue
 
@@ -133,7 +132,7 @@ class JavaWrapper:
                 return [self._auto_wrap(x) for x in result]
 
             if "com.comsol" in java_class_name:
-                return JavaWrapper(result, self._mph_name, self._comsol_client)
+                return JavaWrapper(result, self._mph_name, self._package_dir)
 
             if java_class_name.startswith('java.lang.'):
                 return self._final_unwrap(result)

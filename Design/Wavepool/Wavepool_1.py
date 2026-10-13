@@ -115,7 +115,7 @@ geom.new_coaxport(name="cyl_output", r1=r_bulk, r2=r_pin, l1=l_qubit_drive_1, l2
                   pos=[x_output, -(r_tube+l_output_1), z_tube])
 
 # layout
-geom.new_plane('layout', ax='y', value=h_chip/2)
+# geom.new_plane(name='layout', ax='y', value=h_chip/2)
 
 # combine
 geom.difference(name="dif1",
@@ -142,11 +142,11 @@ phys.port3D(3, "cyl_output")
 
 # phys.Lumped(obj, 'Inductor', "LJ1")
 
-# model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
-# model.physics("emw").feature("pec3").selection().set(29, 31, 55)
-#
-# model.physics("emw").create("lelement1", "LumpedElement", 2)
-# model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
+model.physics("emw").create("pec3", "PerfectElectricConductor", 2)
+model.physics("emw").feature("pec3").selection().set(29, 31, 55)
+
+model.physics("emw").create("lelement1", "LumpedElement", 2)
+model.physics("emw").feature("lelement1").set("LumpedElementType", "Inductor")
 # model.physics("emw").feature("lelement1").set("Lelement", "LJ1")
 # model.physics("emw").feature("lelement1").selection().set(30)
 
@@ -158,7 +158,7 @@ mesh.finish()
 #%% study
 std1 = study_mixin(model, "std1")
 std1.solve_eigenfrequency(freq=3e9, num=5, mode='lr')
-std1.param_sweep(var="LJ1", rang=[L_junction,2*L_junction])
+# std1.param_sweep(var="LJ1", rang=[L_junction,2*L_junction])
 
 #%% plot
 pg1 = result_mixin(model, "pg1", "PlotGroup3D")

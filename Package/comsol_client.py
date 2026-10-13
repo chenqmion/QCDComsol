@@ -1,158 +1,100 @@
-import os
-import glob
-import platform
-import subprocess
-import time
-import re
-import jpype
-import jpype.imports
-
+# comsol_client.py
+import os, jpype, jpype.imports
+from comsol_server import ComsolServer
+from comsol_wrapper import JavaWrapper
 
 class ComsolClient:
-    _is_started = False
-    _server_process = None
+    """
+    管理 JVM 生命周期、COMSOL 连接以及模型的创建与加载。
+    注意：JVM 进程全局只能启动一次（JPype 限制），因此本类应在整个脚本中只实例化一次。
+    """
+    _jvm_started = False  # 类变量：仅用于防止重复启动 JVM，语义清晰
 
-    file_path = os.path.abspath(__file__)
-    comsol_client = os.path.dirname(file_path)
-
-    def __init__(self, comsol_root):
+    def __init__(self, comsol_root: str):
         self.comsol_root = comsol_root
-        self.connect()
+        self._package_dir = os.path.dirname(os.path.abspath(__file__))
+        self.ModelUtil = None
 
-    def connect(self):
-        if self._is_started: return
+        server = ComsolServer(comsol_root)
+        port = server.start()
+        self._server = server
 
-        # Windows cleanup logic
-        if platform.system() == "Windows":
-            os.system("taskkill /F /IM comsolmphserver.exe /T >nul 2>&1")
+        if not ComsolClient._jvm_started:
+            classpath = self._build_classpath()
+            jvm_path = self._get_jvm_path(server._arch, server._is_mac)
+            self._start_jvm(jvm_path, classpath)
+            ComsolClient._jvm_started = True
 
-        # --- 1. Platform Detection ---
-        current_os = platform.system()
-        is_mac = (current_os == "Darwin")
-        arch = "macarm64" if (is_mac and platform.machine() == "arm64") else ("maci64" if is_mac else "win64")
+        self.ModelUtil = self._connect_model_util(port)
+        print(f">>> COMSOL Connected (port {port}) <<<")
 
-        server_exe = "comsol" if is_mac else "comsolmphserver.exe"
-        jvm_lib_name = "libjvm.dylib" if is_mac else "jvm.dll"
+    # --- JVM 相关 ---
 
-        bin_path = os.path.join(self.comsol_root, "bin", arch)
-        server_executable = os.path.join(bin_path, server_exe)
+    def _build_classpath(self) -> list[str]:
+        plugins = os.path.join(self.comsol_root, "plugins")
+        common = os.path.join(self.comsol_root, "java", "common")
+        jars = []
+        if os.path.exists(plugins):
+            for f in os.listdir(plugins):
+                if f.endswith(".jar") and f.lower().startswith(
+                    ("com.comsol.", "org.eclipse.", "javax.websocket")
+                ):
+                    jars.append(os.path.join(plugins, f))
+        if os.path.exists(common):
+            jars += [os.path.join(common, f) for f in os.listdir(common) if f.endswith(".jar")]
+        return sorted(set(jars))
 
-        # --- 2. Windows DLL Environment Fix (KEEPING THIS!) ---
-        if not is_mac:
-            lib_path = os.path.join(self.comsol_root, "lib", arch)
-            for p in [bin_path, lib_path]:
-                if os.path.exists(p):
-                    if p not in os.environ['PATH']:
-                        os.environ['PATH'] = p + os.path.pathsep + os.environ['PATH']
-                    if hasattr(os, 'add_dll_directory'):
-                        try:
-                            os.add_dll_directory(p)
-                        except:
-                            pass
+    def _get_jvm_path(self, arch: str, is_mac: bool) -> str:
+        lib = "libjvm.dylib" if is_mac else "jvm.dll"
+        if is_mac:
+            return os.path.join(self.comsol_root, "java", arch, "jre", "Contents", "Home", "lib", "server", lib)
+        return os.path.join(self.comsol_root, "java", arch, "jre", "bin", "server", lib)
 
-        # --- 3. Start Server ---
-        # Removed the print(f"Starting Server...") for conciseness
-        cmd = [server_executable, 'server', '-port', '2036'] if is_mac else [server_executable, '-port', '2036']
-
-        self._server_process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            env=os.environ.copy(), universal_newlines=True, shell=(not is_mac)
+    def _start_jvm(self, jvm_path: str, classpath: list[str]):
+        jpype.startJVM(
+            jvm_path,
+            f"-Djava.class.path={os.path.pathsep.join(classpath)}",
+            "-XX:TieredStopAtLevel=1",
+            "-Dcs.standalone=false",
+            "-Dcs.display=headless",
+            "-Xmx2g",
+            convertStrings=True,
         )
 
-        # --- 4. Dynamic Port Capture (KEEPING THIS!) ---
-        actual_port = 2036
-        start_time = time.time()
-        while True:
-            line = self._server_process.stdout.readline()
-            if line:
-                # Silenced: print(f"Server Log: {line.strip()}")
-                match = re.search(r"listening on port\s+(\d+)", line)
-                if match:
-                    actual_port = int(match.group(1))
-                    break
-            if time.time() - start_time > 30:
-                break
+    # --- COMSOL 连接 ---
 
-        # --- 5. REFINED CLASSPATH (High Speed Memory Filter - KEEPING ALL!) ---
-        plugins_path = os.path.join(self.comsol_root, "plugins")
-        common_path = os.path.join(self.comsol_root, "java", "common")
+    def _connect_model_util(self, port: int):
+        from com.comsol.model.util import ModelUtil
+        import time
+        for _ in range(20):
+            try:
+                ModelUtil.connect("localhost", port)
+                return ModelUtil
+            except:
+                time.sleep(0.1)
+        raise RuntimeError(f"Failed to connect to COMSOL at port {port}")
 
-        jars_list = []
-        if os.path.exists(plugins_path):
-            all_files = os.listdir(plugins_path)
-            for f in all_files:
-                if f.endswith(".jar"):
-                    f_lower = f.lower()
-                    if f_lower.startswith(("com.comsol.", "org.eclipse.", "javax.websocket")):
-                        jars_list.append(os.path.join(plugins_path, f))
+    # --- 模型操作 ---
 
-        if os.path.exists(common_path):
-            for f in os.listdir(common_path):
-                if f.endswith(".jar"):
-                    jars_list.append(os.path.join(common_path, f))
+    def create_model(self, name: str):
+        try:
+            self.ModelUtil.remove(name)  # 清除同名旧模型
+        except:
+            pass
+        java_model = self.ModelUtil.create(name)
+        model = JavaWrapper(java_model, name, self._package_dir)
+        model.modelNode().create("comp1")
+        return model
 
-        jars_list = sorted(list(set(jars_list)))
-
-        # --- 6. Start JVM ---
-        if not jpype.isJVMStarted():
-            if is_mac:
-                jvm_path = os.path.join(self.comsol_root, "java", arch, "jre", "Contents", "Home", "lib", "server",
-                                        jvm_lib_name)
-            else:
-                jvm_path = os.path.join(self.comsol_root, "java", arch, "jre", "bin", "server", jvm_lib_name)
-
-            jpype.startJVM(
-                jvm_path,
-                f"-Djava.class.path={os.path.pathsep.join(jars_list)}",
-                "-XX:TieredStopAtLevel=1",
-                "-Dcs.standalone=false",
-                "-Dcs.display=headless",
-                "-Xmx2g",
-                convertStrings=True
-            )
-
-            # --- 7. Final Connection ---
-            from com.comsol.model.util import ModelUtil
-
-            connected = False
-            for i in range(20):
-                try:
-                    ModelUtil.connect("localhost", actual_port)
-                    connected = True
-                    break
-                except:
-                    time.sleep(0.1)
-
-            if not connected:
-                raise RuntimeError(f"Failed to connect to COMSOL at port {actual_port} after 2s.")
-
-            self.ModelUtil = ModelUtil
-            ComsolClient._is_started = True
-            print(f">>> COMSOL Connected Successfully (Port: {actual_port}) <<<")
+    def load_model(self, mph_path: str) -> JavaWrapper:
+        if not os.path.exists(mph_path):
+            raise FileNotFoundError(mph_path)
+        name = os.path.basename(mph_path).replace(".mph", "")
+        java_model = self.ModelUtil.load(name, mph_path)
+        return JavaWrapper(java_model, name, self._package_dir)
 
     def disconnect(self):
-        if self._server_process:
-            if self.ModelUtil:
-                try:
-                    self.ModelUtil.disconnect()
-                except:
-                    pass
-            self._server_process.kill()
-            ComsolClient._is_started = False
-            print(">>> COMSOL Disconnected <<<")
-
-    def create_model(self, mph_name):
-        from comsol_wrapper import JavaWrapper
-        java_model = self.ModelUtil.create(mph_name)
-        wrapper = JavaWrapper(java_model, mph_name, self.comsol_client)
-        wrapper.modelNode().create("comp1")
-        return wrapper
-
-    def load_model(self, mph_name):
-        from comsol_wrapper import JavaWrapper
-        mph_path = mph_name+'.mph'
-        if not os.path.exists(mph_path):
-            raise FileNotFoundError(f"Model file not found: {mph_path}")
-        # mph_name = os.path.basename(mph_path).replace(".mph", "")
-        java_model = self.ModelUtil.load(mph_name, mph_path)
-        return JavaWrapper(java_model, mph_name, self.comsol_client)
+        try: self.ModelUtil.disconnect()
+        except: pass
+        self._server.stop()
+        print(">>> COMSOL Disconnected <<<")
