@@ -2,7 +2,6 @@ import os
 import sys
 import platform
 
-sys.path.append("../../Package/")
 from comsol_client import ComsolClient
 from comsol_geometry import geometry_mixin
 from comsol_material import material_mixin
